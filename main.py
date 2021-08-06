@@ -25,13 +25,15 @@ class ManualAgent():
                 return 3
             elif event.key == pygame.K_s and self.snake.direction != 1:     
                 return 4
-    def receive_feedback(grow, game_over):
+
+    def receive_feedback(self, grow, game_over):
         pass 
         
 class RandomAgent():
     def next_move(self, game):
         return np.random.randint(1,5)
-    def receive_feedback(grow, game_over):
+
+    def receive_feedback(self, grow, game_over):
         pass 
 
 class DQNNetwork():
@@ -39,19 +41,24 @@ class DQNNetwork():
         #torch.nn.Conv2D
         pass
 
+class DQNAgent():
+    def __init__(self, model) -> None:
+        self.model=model
+        self.cnt = 0;
+
+    def next_move(self, game):
+        self.cnt = self.cnt +1;
+        x = pygame.surfarray.pixels3d(game.screen);
+        if self.cnt == 10:
+            print(x.shape)
+
     #TODO game needs method give_feedback 
-    def receive_feedback(grow, game_over):
+    def receive_feedback(self, grow, game_over):
         if game_over:
             return -1
         if grow:
             return 10 
 
-class DQNAgent():
-    def __init__(self, model) -> None:
-        self.model=model
-    def next_move(self, game):
-       x = np.zeros((320,240))
-
         
-game=Game(size, agent=ManualAgent())
+game=Game(size, agent=DQNAgent(DQNNetwork()))
 game.run()
