@@ -1,4 +1,5 @@
 import numpy as np
+
 def rand_pos(size_x,size_y):
     x = np.random.choice(size_x//10)
     y = np.random.choice(size_y//10)

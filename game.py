@@ -1,7 +1,6 @@
 from helpers import rand_pos
 import pygame
 
-
 class Snake():
     width=10
     height=10
@@ -17,9 +16,10 @@ class Snake():
     def draw(self):
         for x,y in self.body:
             pygame.draw.rect(self.screen, (188,45,23), (x,y, 10,10))
+
     def move(self,direction):
         x,y =self.body[0]
-        if direction == 1:
+        if   direction==1:
             y-=10
         elif direction==2:
             x-=10
@@ -34,7 +34,6 @@ class Snake():
             del self.body[-1] # delete tail if we haven't eaten
         else:
             self.grow=False
-      
         
 
 class Game():
@@ -53,6 +52,7 @@ class Game():
 
         self.running=False
         self.game_over=False
+
     def opposite_direction(self,direction):
         if  (self.snake.direction == 4 and direction == 1) or ( self.snake.direction == 1 and direction == 4) or(self.snake.direction == 3 and direction == 2) or (self.snake.direction == 2 and direction == 3):     
             return True
@@ -71,6 +71,7 @@ class Game():
 
             self.game_over= self.check_collisions()  
             self.check_food() # snake.grow
+            self.agent.receive_feedback(self.snake.grow, self.game_over);
             self.screen.fill((0,0,0)) 
             self.food.draw()
             
@@ -103,21 +104,6 @@ class Game():
         img = self.font.render(f'Length {self.score} ', True, (180,180,30))
         self.screen.blit(img, (0,0))
         pygame.display.flip()
-        
-    def process_input(self,event):
-        if event.type == pygame.KEYDOWN:
-            #up=1
-            # left=2
-            #right=3
-            #down =4   
-            if event.key == pygame.K_w and self.snake.direction != 4:     
-                return 1
-            elif event.key == pygame.K_a and self.snake.direction != 3:     
-                return 2
-            elif event.key == pygame.K_d and self.snake.direction != 2:    
-                return 3
-            elif event.key == pygame.K_s and self.snake.direction != 1:     
-                return 4
 
     def check_collisions(self):
         x,y =self.snake.body[0]
