@@ -1,9 +1,10 @@
+import torch
 from helpers import rand_pos
 import pygame
 
 class Snake():
-    width=10
-    height=10
+    width=1
+    height=1
     length=1
     grow=False
     direction=1
@@ -15,18 +16,18 @@ class Snake():
         
     def draw(self):
         for x,y in self.body:
-            pygame.draw.rect(self.screen, (188,45,23), (x,y, 10,10))
+            pygame.draw.rect(self.screen, (188,45,23), (x,y, 1,1))
 
     def move(self,direction):
         x,y =self.body[0]
         if   direction==1:
-            y-=10
+            y-=1
         elif direction==2:
-            x-=10
+            x-=1
         elif direction==3:
-            x+=10
+            x+=1
         elif direction==4:
-            y+=10
+            y+=1
 
         self.body.insert(0,[x,y]) # insert new body part at head
         
@@ -38,7 +39,7 @@ class Snake():
 
 class Game():
     score=0
-    def __init__(self,size,agent,title="Snake"):
+    def __init__(self,size,title="Snake"):
         pygame.init()
         pygame.display.set_caption(title)
         self.font = pygame.font.SysFont("gillsans.ttc", 24)
@@ -46,7 +47,6 @@ class Game():
         self.surface = pygame.Surface(size)
         self.clock = pygame.time.Clock()
        
-        self.agent= agent
         self.snake=Snake(self.screen)
         self.food=Food(self.screen)
 
@@ -58,29 +58,33 @@ class Game():
             return True
         return False
 
-    def run(self):
-        self.running = True
+
+   
+    def execute_action(self,direction):
+        reward = 1
+        self.handle_game_over()
         
-        while self.running:
-            self.handle_game_over()
-            
-            direction = self.agent.next_move(self)
-            if direction is not None and not self.opposite_direction(direction):
-                self.snake.move(direction)
-                self.snake.direction = direction
+        if direction is not None and not self.opposite_direction(direction):
+            self.snake.move(direction)
+            self.snake.direction = direction
 
-            self.game_over= self.check_collisions()  
-            self.check_food() # snake.grow
-            self.agent.receive_feedback(self.snake.grow, self.game_over);
-            self.screen.fill((0,0,0)) 
-            self.food.draw()
-            
-            self.snake.draw()
-            self.display_score()
+        self.game_over= self.check_collisions() 
+        if self.game_over:
+            reward= -1 
+        self.check_food() # snake.grow
+        self.screen.fill((0,0,0)) 
+        self.food.draw()
+        
+        self.snake.draw()
+        #self.display_score()
 
-            pygame.display.update()
-            self.clock.tick(30)
-        pygame.quit()
+        pygame.display.update()
+
+        next_state = self.get_state()
+        return reward, next_state, self.game_over
+        
+    def get_state(self):
+        return torch.tensor(pygame.PixelArray(self.surface),dtype=torch.float32)
 
     def handle_game_over(self):
         if self.game_over:
@@ -109,7 +113,7 @@ class Game():
         x,y =self.snake.body[0]
         x_screen,y_screen= self.screen.get_size()
 
-        if x >= x_screen or x <0 or y > y_screen-10 or y<0:
+        if x >= x_screen or x <0 or y > y_screen-1 or y<0:
             return True
         if [x,y] in self.snake.body[1:]:
             return True
@@ -129,6 +133,6 @@ class Food():
         self.x0,self.y0 = rand_pos(self.screen_x, self.screen_y)
 
     def draw(self):
-        pygame.draw.rect(self.screen, (188,180,23), (self.x0,self.y0, 10,10))
+        pygame.draw.rect(self.screen, (188,180,23), (self.x0,self.y0, 1,1))
     def respawn(self):
         self.x0,self.y0 = rand_pos(self.screen_x, self.screen_y)

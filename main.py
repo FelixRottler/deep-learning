@@ -1,8 +1,13 @@
 
+from typing import ForwardRef
+from numpy.random import gamma
 from pygame.surfarray import array2d
 from game import  Game
 import pygame
 import numpy as np
+import torch
+import torch.nn as nn
+import torch.optim as optim
 
 size=(320,240)
 
@@ -25,40 +30,142 @@ class ManualAgent():
                 return 3
             elif event.key == pygame.K_s and self.snake.direction != 1:     
                 return 4
-
-    def receive_feedback(self, grow, game_over):
+    def receive_feedback(self,grow, game_over):
         pass 
         
 class RandomAgent():
     def next_move(self, game):
         return np.random.randint(1,5)
-
-    def receive_feedback(self, grow, game_over):
+    def receive_feedback(self,grow, game_over):
         pass 
 
-class DQNNetwork():
-    def __init__(self) -> None:
-        #torch.nn.Conv2D
-        pass
+class DQNNetwork(nn.Module):
+    def __init__(self, input_shape,fc1_dim, fc2_dim, number_actions, batch_size) -> None:
+        super(DQNNetwork,self).__init__()
+        self.batch_size= batch_size
+        self.input_shape=input_shape
+        self.net = nn.Sequential(   
+                nn.Linear(input_shape,fc1_dim),
+                nn.ReLU(),
+                nn.Linear(fc1_dim,fc2_dim),
+                nn.ReLU(), 
+                nn.Linear(fc2_dim, number_actions)
+        )
+
+        self.criterion = torch.nn.MSELoss()
+    def forward(self,observations):
+        print("        OBSERVATIONS")
+        print("        "+str(observations.dtype))
+        # observations dimension --> tensor(batch_size,3,32,32)
+        observations = observations.view(observations.shape[0],-1) # 3*32*32
+        #dimesion (5,3*32*32)
+        print("        "+str(observations.shape))
+        return self.net(observations)
+   
+
+   
 
 class DQNAgent():
-    def __init__(self, model) -> None:
-        self.model=model
-        self.cnt = 0;
+    def __init__(self, model,input_shape ,epsilon,memory_capacity,gamma,episodes=50,number_actions=4,batch_size=8) -> None:
 
-    def next_move(self, game):
-        self.cnt = self.cnt +1;
-        x = pygame.surfarray.pixels3d(game.screen);
-        if self.cnt == 10:
-            print(x.shape)
+        self.model = model # finding the optimal q-function
 
-    #TODO game needs method give_feedback 
-    def receive_feedback(self, grow, game_over):
-        if game_over:
-            return -1
-        if grow:
-            return 10 
+        self.epsilon = epsilon
+        self.gamma = gamma
 
+        # experience replay
+        # agent L --> execute L --> 
+        self.memory_capacity = memory_capacity
+
+        self.episodes = episodes
+        self.number_actions = number_actions
+        self.batch_size= batch_size
+    
+        self.state_memory = torch.zeros(self.memory_capacity,*input_shape,dtype=torch.float32) 
+        self.action_memory = torch.zeros(self.memory_capacity, dtype=torch.int16)
+        self.reward_memory = torch.zeros(self.memory_capacity)
+        self.next_state_memory = torch.zeros(self.memory_capacity,*input_shape,dtype=torch.float32)
+        self.terminal_memory = torch.zeros(self.memory_capacity,dtype=torch.bool)
+
+        self.memory_index = 0
+      
+    
+    def store_experience(self, state, action, reward, next_state, terminal):
+        print("    STORING EXPERIENCE")
+        self.state_memory[self.memory_index] = state
+        self.action_memory[self.memory_index] = action
+        self.reward_memory[self.memory_index] = reward
+        self.next_state_memory[self.memory_index] = next_state
+        self.terminal_memory[self.memory_index] = terminal
+
+        self.memory_index += 1
+
+    def choose_next_action(self, state):
         
-game=Game(size, agent=DQNAgent(DQNNetwork()))
-game.run()
+        if np.random.rand() > self.epsilon:
+            # Exploration Phase
+            action = np.random.choice(self.number_actions)
+        else:
+            # Exploitation Phase
+            print("    CHOOSE ACTION WITH STATE")
+            print("    "+str(state.shape))
+            action = torch.argmax(self.model(state)).item()
+        return action
+
+    def sample_minibatch_from_memory(self):
+        mask = np.random.choice(self.memory_capacity , size = self.batch_size)
+
+        state_batch = self.state_memory[mask]
+        next_state_batch = self.next_state_memory[mask]
+        reward_batch = self.reward_memory[mask]
+        action_batch = self.action_memory[mask]
+        terminal_batch = self.terminal_memory[mask]
+        
+        return state_batch, next_state_batch, reward_batch, action_batch, terminal_batch
+
+
+    def learn(self, state,game):
+
+        if self.memory_index < self.batch_size:
+            print("NOT ENOUG MEMORY ----- SKIPPING")
+            action = self.choose_next_action(state.unsqueeze(0)) 
+
+            reward, next_state, terminal = game.execute_action(action) 
+            self.store_experience( state, action, reward, next_state, terminal)
+        else:
+            print("LEARNING FROM MEMORY")
+            action = self.choose_next_action(state) 
+
+            reward, next_state, terminal = game.execute_action(action) 
+            self.store_experience( state, action, reward, next_state, terminal)
+
+            state_batch,next_state_batch,reward_batch,action_batch, terminal_batch = self.sample_minibatch_from_memory()
+            mask_terminal = np.where(terminal_batch == True)
+            mask_non_terminal = np.where(terminal_batch == True)
+
+
+            target = torch.zeros((self.batch_size))
+            target[mask_terminal] = reward_batch[mask_terminal]
+            target[mask_non_terminal] = reward_batch[mask_non_terminal] + self.gamma*torch.argmax(self.model(next_state_batch)).item()
+
+            loss = self.model.criterion(target, torch.argmax(self.model(state_batch)))
+            loss.backward()
+
+
+
+epochs = 100
+
+size=(64,64)
+dqn_agent = DQNAgent(DQNNetwork(64*64,256, 256, 4, 8),size, 0.5,5000,0.8)
+game = Game(size)
+
+
+for i in range(epochs):
+    state = game.get_state()
+    dqn_agent.learn(state,game)
+
+
+
+                
+                
+
