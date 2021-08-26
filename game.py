@@ -61,7 +61,7 @@ class Game():
 
    
     def execute_action(self,direction):
-        reward = 1
+        reward = 1.0
         self.handle_game_over()
         
         if direction is not None and not self.opposite_direction(direction):
@@ -70,8 +70,9 @@ class Game():
 
         self.game_over= self.check_collisions() 
         if self.game_over:
-            reward= -1 
-        self.check_food() # snake.grow
+            reward= -1.0
+        if (self.check_food()):
+            reward = 10.0
         self.screen.fill((0,0,0)) 
         self.food.draw()
         
@@ -84,7 +85,7 @@ class Game():
         return reward, next_state, self.game_over
         
     def get_state(self):
-        return torch.tensor(pygame.PixelArray(self.surface),dtype=torch.float32)
+        return pygame.PixelArray(self.surface)
 
     def handle_game_over(self):
         if self.game_over:
@@ -93,11 +94,14 @@ class Game():
             while not done:
                 for event in pygame.event.get():
                     if event.type == pygame.KEYDOWN:
+                        self.reset()
                         done = True
-                        self.game_over=False
-                        self.snake= Snake(self.screen)
-                        self.food = Food(self.screen)
-                        self.score=0
+    
+    def reset(self):
+        self.game_over=False
+        self.snake= Snake(self.screen)
+        self.food = Food(self.screen)
+        self.score=0
 
     def display_game_over(self):
         img = self.font.render("GAME OVER Press any key", True, (180,45,30))
@@ -125,6 +129,8 @@ class Game():
             self.snake.grow=True
             self.food.respawn()
             self.score+=1
+            return True
+        return False
 
 class Food():
     def __init__(self, screen):
