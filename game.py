@@ -61,6 +61,7 @@ class Game():
 
    
     def execute_action(self,direction):
+        self.screen.fill((0,0,0))
         reward = 1.0
         self.handle_game_over()
         
@@ -72,14 +73,18 @@ class Game():
         if self.game_over:
             reward= -1.0
         if (self.check_food()):
-            reward = 10.0
-        self.screen.fill((0,0,0)) 
+            reward = 10.0 
         self.food.draw()
         
         self.snake.draw()
         #self.display_score()
 
         pygame.display.update()
+        pygame.display.flip()
+        self.clock.tick(10)
+        for event in pygame.event.get(): 
+            if event.type == pygame.QUIT:
+                pass
 
         next_state = self.get_state()
         return reward, next_state, self.game_over
