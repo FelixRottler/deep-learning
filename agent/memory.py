@@ -32,12 +32,11 @@ class ReplayBuffer:
 
     def sample(self):
         max_mem = min(self.memory_index, self.memory_capacity)
-        mask = np.random.choice(max_mem, size=self.batch_size,replace=False)
+        mask = np.random.choice(max_mem, size=self.batch_size)
 
         state_batch = torch.from_numpy(self.state_memory[mask]).float()
         next_state_batch = torch.from_numpy(self.next_state_memory[mask]).float()
         reward_batch = torch.from_numpy(self.reward_memory[mask])
         action_batch = torch.from_numpy(self.action_memory[mask])
         terminal_batch = torch.from_numpy(self.terminal_memory[mask])
-
         return state_batch, next_state_batch, reward_batch, action_batch, terminal_batch

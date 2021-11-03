@@ -10,13 +10,13 @@ from environment.environments import Environment
 
 
 COLOR_BLACK = (14, 20, 19)
+COLOR_BORDER = (60, 20, 200)
 
 
 class SnakeEnv(Environment):
 
     score = 0
     moving = True
-    last_pos = None
 
     def __init__(self, window_size, frame_stack_count=4) -> None:
         pygame.init()
@@ -29,8 +29,8 @@ class SnakeEnv(Environment):
 
         self.food = [Food(self.display)]
         self.snake = Snake(self.display)
-        self.frame_history = deque(maxlen=frame_stack_count)
         self.max_frame_stack_count = frame_stack_count
+        self.frame_history = deque(maxlen=self.max_frame_stack_count)
 
     def step(self, direction) -> Tuple[float, np.ndarray, bool]:
         if not self._opposite_direction(direction):
@@ -58,11 +58,11 @@ class SnakeEnv(Environment):
         return np.stack(self.frame_history)
 
     def calculate_reward(self):
-        reward = 0.0
-        if self.done:
-            reward = -1
+        reward = 0.5
+        if self.done or not self.moving:
+            reward = -10
         elif self.is_eating:
-            reward = 1
+            reward = max(10, self.score)
      
         return reward
 
@@ -79,6 +79,7 @@ class SnakeEnv(Environment):
 
 
     def _render(self):
+        
         self.display.fill(COLOR_BLACK)
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
@@ -88,8 +89,21 @@ class SnakeEnv(Environment):
             food.render()
         self.snake.render()
 
+        self._render_borders()
+
+     
         pygame.display.update()
-        self.clock.tick(60)
+        self.clock.tick(10)
+    def _render_borders(self):
+        x,y = self.display.get_size()
+        # top line
+        pygame.draw.rect(self.display, COLOR_BORDER, [0,0,x,10])
+        # bottom line
+        pygame.draw.rect(self.display, COLOR_BORDER, [0,y-10,x,y])
+        # left line
+        pygame.draw.rect(self.display, COLOR_BORDER, [0,0,10, y])
+        # right line
+        pygame.draw.rect(self.display, COLOR_BORDER, [x-10,0,x, y])
 
     def _handle_food(self):
         x, y = self.snake.body[0]
@@ -105,7 +119,7 @@ class SnakeEnv(Environment):
         x, y = self.snake.body[0]
         x_screen, y_screen = self.display.get_size()
 
-        if x > x_screen - 10 or x < 0 or y > y_screen - 10 or y < 0:
+        if x > x_screen - 20 or x < 10 or y > y_screen - 20 or y < 10:
             return True
         if [x, y] in self.snake.body[1:]:
             return True
@@ -115,6 +129,6 @@ class SnakeEnv(Environment):
         self.done = False
         self.score = 0
         self.moving = True
-        self.last_pos = None
         self.snake = Snake(self.display)
         self.food = [Food(self.display)]
+        self.frame_history = deque(maxlen=self.max_frame_stack_count)

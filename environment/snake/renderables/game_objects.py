@@ -2,7 +2,7 @@ import pygame
 import random
 
 COLOR_RED = (255, 0, 0)
-COLOR_FOOD = (87, 204, 153)
+COLOR_FOOD = (87, 224, 123)
 COLOR_SNAKE = (230, 62, 109)
 COLOR_SNAKE_HEAD = (90, 15, 123)
 
@@ -16,8 +16,8 @@ class Food(GameObject):
         self.display = display
         x, y = display.get_size()
         self.position = (
-            random.randrange(0, x - 10, 10),
-            random.randrange(0, y - 10, 10),
+            random.randrange(10, x - 20, 10),
+            random.randrange(10, y - 20, 10),
         )
 
     def render(self):
@@ -28,8 +28,8 @@ class Food(GameObject):
     def respawn(self):
         x, y = self.display.get_size()
         self.position = (
-            random.randrange(0, x-10 , 10),
-            random.randrange(0, y-10 , 10),
+            random.randrange(10, x-20 , 10),
+            random.randrange(10, y-20 , 10),
         )
 
 
